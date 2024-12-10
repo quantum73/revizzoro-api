@@ -13,7 +13,7 @@ vet: lint
 .PHONY:vet
 
 run: vet
-	go run ./...
+	go run ./cmd/main.go
 .PHONY:run
 
 tidy:
