@@ -2,10 +2,9 @@ package startup
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/quantum73/revizzoro-api/api/dishes"
-	"github.com/quantum73/revizzoro-api/api/restaurants"
+	"github.com/gin-gonic/gin"
 	"github.com/quantum73/revizzoro-api/config"
 	"github.com/quantum73/revizzoro-api/database"
 	log "github.com/sirupsen/logrus"
@@ -34,16 +33,20 @@ func StartServer() {
 	db := database.NewDatabase(ctx, dbConfig)
 	db.Connect()
 
-	mainRouter := mux.NewRouter()
-	mainRouter.StrictSlash(true)
-	// Dishes package router
-	dishesRouter := mainRouter.PathPrefix("/dishes").Subrouter()
-	dishesRouter.HandleFunc("/{id:[0-9]+}", dishes.DetailByIdHandler)
-	dishesRouter.HandleFunc("", dishes.ListHandler)
-	// Restaurants package router
-	restaurantsRouter := mainRouter.PathPrefix("/restaurants").Subrouter()
-	restaurantsRouter.HandleFunc("/{id:[0-9]+}", restaurants.DetailByIdHandler)
-	restaurantsRouter.HandleFunc("", restaurants.ListHandler)
+	//mainRouter := mux.NewRouter()
+	//mainRouter.StrictSlash(true)
+	//// Dishes package router
+	//dishesRouter := mainRouter.PathPrefix("/dishes").Subrouter()
+	//dishesRouter.HandleFunc("/{id:[0-9]+}", dishes.DetailByIdHandler)
+	//dishesRouter.HandleFunc("", dishes.ListHandler)
+	//// Restaurants package router
+	//restaurantsRouter := mainRouter.PathPrefix("/restaurants").Subrouter()
+	//restaurantsRouter.HandleFunc("/{id:[0-9]+}", restaurants.DetailByIdHandler)
+	//restaurantsRouter.HandleFunc("", restaurants.ListHandler)
+	router := gin.Default()
+	router.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "Welcome Gin Server")
+	})
 
 	// Setting up server with gracefully shutdown
 	serverAddr := fmt.Sprintf("%s:%d", env.ServerHost, env.ServerPort)
@@ -53,11 +56,11 @@ func StartServer() {
 		WriteTimeout: time.Second * time.Duration(env.ServeWriteTimeout),
 		ReadTimeout:  time.Second * time.Duration(env.ServeReadTimeout),
 		IdleTimeout:  time.Second * time.Duration(env.ServerIdleTimeout),
-		Handler:      mainRouter,
+		Handler:      router.Handler(),
 	}
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			log.Println(err)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalln(err)
 		}
 	}()
 
@@ -71,8 +74,12 @@ func StartServer() {
 	// Disconnect db
 	db.Disconnect()
 	// Shutdown server
-	_ = srv.Shutdown(ctx)
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("server shutdown error:", err)
+	}
 
-	log.Println("Gracefully shutting down")
-	os.Exit(0)
+	select {
+	case <-ctx.Done():
+		log.Infof("Gracefully shutting down after %d seconds", env.ServerGracefulTimeout)
+	}
 }
