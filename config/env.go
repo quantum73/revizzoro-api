@@ -8,6 +8,7 @@ import (
 
 type Env struct {
 	// server
+	ServerMode            string `mapstructure:"SERVER_MODE"`
 	ServerHost            string `mapstructure:"SERVER_HOST"`
 	ServerPort            uint16 `mapstructure:"SERVER_PORT"`
 	ServeWriteTimeout     uint16 `mapstructure:"SERVER_WRITE_TIMEOUT"`

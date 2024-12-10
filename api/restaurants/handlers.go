@@ -1,40 +1,29 @@
 package restaurants
 
 import (
-	"fmt"
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/quantum73/revizzoro-api/api/restaurants/model"
 	"net/http"
 	"strconv"
 )
 
-func ListHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = fmt.Fprint(w, "Restaurants list")
+func ListHandler(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, gin.H{"restaurants": []string{}})
 }
 
-func DetailByIdHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-	if id == "" {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = fmt.Fprint(w, "Restaurant not found")
-	}
-
+func DetailByIdHandler(ctx *gin.Context) {
+	id := ctx.Param("id")
 	idAsInt, err := strconv.Atoi(id)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = fmt.Fprint(w, "Restaurant not found")
+		ctx.JSON(http.StatusNotFound, gin.H{"message": "restaurant not found"})
+		return
 	}
 
 	newRestaurant, err := model.NewRestaurant(idAsInt, "MockName", "http://some-rest.com")
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = fmt.Fprint(w, err.Error())
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "something wrong with restaurant object"})
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = fmt.Fprint(w, newRestaurant.String())
+	ctx.JSON(http.StatusOK, gin.H{"restaurant": newRestaurant})
 }

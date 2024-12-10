@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/quantum73/revizzoro-api/api/dishes"
+	"github.com/quantum73/revizzoro-api/api/restaurants"
 	"github.com/quantum73/revizzoro-api/config"
 	"github.com/quantum73/revizzoro-api/database"
 	log "github.com/sirupsen/logrus"
@@ -19,6 +21,7 @@ func StartServer() {
 	ctx := context.Background()
 	env := config.NewEnv(".env", true)
 
+	// Setting up Postgres
 	dbConfig := database.DbConfig{
 		User:               env.DBUser,
 		Password:           env.DBPassword,
@@ -29,24 +32,18 @@ func StartServer() {
 		MaxOpenConnections: env.DbMaxOpenConnections,
 		MaxIdleConnections: env.DbMaxIdleConnections,
 	}
-
 	db := database.NewDatabase(ctx, dbConfig)
 	db.Connect()
 
-	//mainRouter := mux.NewRouter()
-	//mainRouter.StrictSlash(true)
-	//// Dishes package router
-	//dishesRouter := mainRouter.PathPrefix("/dishes").Subrouter()
-	//dishesRouter.HandleFunc("/{id:[0-9]+}", dishes.DetailByIdHandler)
-	//dishesRouter.HandleFunc("", dishes.ListHandler)
-	//// Restaurants package router
-	//restaurantsRouter := mainRouter.PathPrefix("/restaurants").Subrouter()
-	//restaurantsRouter.HandleFunc("/{id:[0-9]+}", restaurants.DetailByIdHandler)
-	//restaurantsRouter.HandleFunc("", restaurants.ListHandler)
+	// Setting up routers
+	gin.SetMode(env.ServerMode)
 	router := gin.Default()
-	router.GET("/", func(c *gin.Context) {
-		c.String(http.StatusOK, "Welcome Gin Server")
-	})
+	// Restaurants package router
+	router.GET("/restaurants/:id", restaurants.DetailByIdHandler)
+	router.GET("/restaurants/", restaurants.ListHandler)
+	// Dishes package router
+	router.GET("/dishes/:id", dishes.DetailByIdHandler)
+	router.GET("/dishes/", dishes.ListHandler)
 
 	// Setting up server with gracefully shutdown
 	serverAddr := fmt.Sprintf("%s:%d", env.ServerHost, env.ServerPort)
@@ -71,15 +68,11 @@ func StartServer() {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*time.Duration(env.ServerGracefulTimeout))
 	defer cancel()
 
-	// Disconnect db
 	db.Disconnect()
-	// Shutdown server
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("server shutdown error:", err)
 	}
 
-	select {
-	case <-ctx.Done():
-		log.Infof("Gracefully shutting down after %d seconds", env.ServerGracefulTimeout)
-	}
+	<-ctx.Done()
+	log.Infof("Gracefully shutting down after %d seconds", env.ServerGracefulTimeout)
 }

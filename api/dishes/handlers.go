@@ -1,40 +1,29 @@
 package dishes
 
 import (
-	"fmt"
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/quantum73/revizzoro-api/api/dishes/model"
 	"net/http"
 	"strconv"
 )
 
-func ListHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = fmt.Fprint(w, "Dishes list")
+func ListHandler(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, gin.H{"dishes": []string{}})
 }
 
-func DetailByIdHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-	if id == "" {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = fmt.Fprint(w, "Dish not found")
-	}
-
+func DetailByIdHandler(ctx *gin.Context) {
+	id := ctx.Param("id")
 	idAsInt, err := strconv.Atoi(id)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = fmt.Fprint(w, "Dish not found")
+		ctx.JSON(http.StatusNotFound, gin.H{"message": "dish not found"})
+		return
 	}
 
 	newDish, err := model.NewDish(idAsInt, "Long Bull", 1500, 5, 1)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = fmt.Fprint(w, err.Error())
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "something wrong with dish object"})
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = fmt.Fprint(w, newDish.String())
+	ctx.JSON(http.StatusOK, gin.H{"dish": newDish})
 }
