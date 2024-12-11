@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/quantum73/revizzoro-api/api/dishes"
 	"github.com/quantum73/revizzoro-api/api/restaurants"
+	pg "github.com/quantum73/revizzoro-api/arch/postgres"
 	"github.com/quantum73/revizzoro-api/config"
-	"github.com/quantum73/revizzoro-api/database"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -22,7 +22,7 @@ func StartServer() {
 	env := config.NewEnv(".env", true)
 
 	// Setting up Postgres
-	dbConfig := database.DbConfig{
+	dbConfig := pg.DbConfig{
 		User:               env.DBUser,
 		Password:           env.DBPassword,
 		Host:               env.DBHost,
@@ -32,18 +32,20 @@ func StartServer() {
 		MaxOpenConnections: env.DbMaxOpenConnections,
 		MaxIdleConnections: env.DbMaxIdleConnections,
 	}
-	db := database.NewDatabase(ctx, dbConfig)
+	db := pg.NewDatabase(ctx, dbConfig)
 	db.Connect()
 
 	// Setting up routers
 	gin.SetMode(env.ServerMode)
 	router := gin.Default()
 	// Restaurants package router
-	router.GET("/restaurants/:id", restaurants.DetailByIdHandler)
-	router.GET("/restaurants/", restaurants.ListHandler)
+	restaurantsRouter := router.Group("/restaurants")
+	restaurantsController := restaurants.NewController(db)
+	restaurantsController.MountRoutes(restaurantsRouter)
 	// Dishes package router
-	router.GET("/dishes/:id", dishes.DetailByIdHandler)
-	router.GET("/dishes/", dishes.ListHandler)
+	dishesRouter := router.Group("/dishes")
+	dishesController := dishes.NewController(db)
+	dishesController.MountRoutes(dishesRouter)
 
 	// Setting up server with gracefully shutdown
 	serverAddr := fmt.Sprintf("%s:%d", env.ServerHost, env.ServerPort)

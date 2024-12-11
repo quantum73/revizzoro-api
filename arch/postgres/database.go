@@ -1,4 +1,4 @@
-package database
+package postgres
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 type DbConfig struct {
@@ -17,6 +18,7 @@ type DbConfig struct {
 	SSLMode            string
 	MaxOpenConnections uint16
 	MaxIdleConnections uint16
+	QueryTimeout       time.Duration
 }
 
 type Database interface {
