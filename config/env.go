@@ -6,15 +6,23 @@ import (
 	"github.com/spf13/viper"
 )
 
+type ServerModeEnum string
+
+const (
+	DEBUG   ServerModeEnum = "debug"
+	TEST    ServerModeEnum = "test"
+	RELEASE ServerModeEnum = "release"
+)
+
 type Env struct {
 	// server
-	ServerMode            string `mapstructure:"SERVER_MODE"`
-	ServerHost            string `mapstructure:"SERVER_HOST"`
-	ServerPort            uint16 `mapstructure:"SERVER_PORT"`
-	ServeWriteTimeout     uint16 `mapstructure:"SERVER_WRITE_TIMEOUT"`
-	ServeReadTimeout      uint16 `mapstructure:"SERVER_READ_TIMEOUT"`
-	ServerIdleTimeout     uint16 `mapstructure:"SERVER_IDLE_TIMEOUT"`
-	ServerGracefulTimeout uint16 `mapstructure:"SERVER_GRACEFUL_TIMEOUT"`
+	ServerMode            ServerModeEnum `mapstructure:"SERVER_MODE"`
+	ServerHost            string         `mapstructure:"SERVER_HOST"`
+	ServerPort            uint16         `mapstructure:"SERVER_PORT"`
+	ServeWriteTimeout     uint16         `mapstructure:"SERVER_WRITE_TIMEOUT"`
+	ServeReadTimeout      uint16         `mapstructure:"SERVER_READ_TIMEOUT"`
+	ServerIdleTimeout     uint16         `mapstructure:"SERVER_IDLE_TIMEOUT"`
+	ServerGracefulTimeout uint16         `mapstructure:"SERVER_GRACEFUL_TIMEOUT"`
 	// database
 	DBHost               string `mapstructure:"DB_HOST"`
 	DBPort               uint16 `mapstructure:"DB_PORT"`

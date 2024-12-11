@@ -20,6 +20,14 @@ import (
 func StartServer() {
 	ctx := context.Background()
 	env := config.NewEnv(".env", true)
+	if env.ServerMode == config.RELEASE {
+		log.SetFormatter(&log.JSONFormatter{
+			TimestampFormat: time.RFC3339Nano,
+			PrettyPrint:     false,
+		})
+	} else {
+		log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
+	}
 
 	// Setting up Postgres
 	dbConfig := pg.DbConfig{
@@ -36,7 +44,7 @@ func StartServer() {
 	db.Connect()
 
 	// Setting up routers
-	gin.SetMode(env.ServerMode)
+	gin.SetMode(string(env.ServerMode))
 	router := gin.Default()
 	// Restaurants package router
 	restaurantsRouter := router.Group("/restaurants")

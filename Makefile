@@ -23,3 +23,11 @@ tidy:
 tests:
 	go test ./...
 .PHONY:tests
+
+up:
+	docker-compose -f ./docker-compose.yml up -d --force-recreate --build
+.PHONY:up
+
+down:
+	docker-compose -f ./docker-compose.yml down
+.PHONY:down
