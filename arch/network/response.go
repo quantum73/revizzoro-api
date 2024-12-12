@@ -5,7 +5,9 @@ import (
 )
 
 const (
-	OKMessage string = "OK"
+	OKBaseMessage                  string = "OK"
+	NotFoundBaseMessage            string = "Not found"
+	InternalServerErrorBaseMessage string = "Something went wrong on server"
 )
 
 type response struct {
