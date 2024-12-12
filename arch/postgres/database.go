@@ -23,6 +23,7 @@ type DbConfig struct {
 
 type Database interface {
 	GetInstance() *database
+	GetConfig() DbConfig
 	Connect()
 	Disconnect()
 }
@@ -43,6 +44,10 @@ func NewDatabase(ctx context.Context, config DbConfig) Database {
 
 func (db *database) GetInstance() *database {
 	return db
+}
+
+func (db *database) GetConfig() DbConfig {
+	return db.config
 }
 
 func (db *database) Connect() {
