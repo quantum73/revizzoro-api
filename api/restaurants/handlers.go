@@ -5,6 +5,7 @@ import (
 	"github.com/quantum73/revizzoro-api/api/restaurants/model"
 	"github.com/quantum73/revizzoro-api/arch/network"
 	"github.com/quantum73/revizzoro-api/arch/postgres"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 )
 
@@ -22,27 +23,71 @@ func (c *controller) MountRoutes(group *gin.RouterGroup) {
 }
 
 func (c *controller) ListHandler(ctx *gin.Context) {
-	r, _ := model.NewRestaurant(1, "Example", "https://example-rest.com")
-	resp := network.NewSuccessDataResponse(network.OKMessage, []*model.Restaurant{r})
+	db := c.db.GetInstance()
+
+	rows, err := db.QueryContext(ctx, "SELECT * FROM restaurants")
+	if err != nil {
+		resp := network.NewInternalServerErrorResponse(network.InternalServerErrorBaseMessage)
+		ctx.JSON(resp.GetStatus(), resp)
+		return
+	}
+	defer rows.Close()
+
+	restaurants := make([]*model.Restaurant, 0)
+	for rows.Next() {
+		var (
+			id         int
+			name, link string
+		)
+		if err := rows.Scan(&id, &name, &link); err != nil {
+			log.Errorf("Error scanning row: %s", err)
+		}
+
+		r, err := model.NewRestaurant(id, name, link)
+		if err != nil {
+			log.Errorf("Error creating restaurant sturcture: %s", err)
+		}
+		restaurants = append(restaurants, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		resp := network.NewInternalServerErrorResponse(network.InternalServerErrorBaseMessage)
+		ctx.JSON(resp.GetStatus(), resp)
+		return
+	}
+
+	resp := network.NewSuccessDataResponse(network.OKBaseMessage, restaurants)
 	ctx.JSON(resp.GetStatus(), resp)
 }
 
 func (c *controller) DetailByIdHandler(ctx *gin.Context) {
-	id := ctx.Param("id")
-	idAsInt, err := strconv.Atoi(id)
+	db := c.db.GetInstance()
+
+	restaurantId, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
-		resp := network.NewBadRequestResponse("restaurant not found")
+		resp := network.NewBadRequestResponse(network.NotFoundBaseMessage)
 		ctx.JSON(resp.GetStatus(), resp)
 		return
 	}
 
-	newRestaurant, err := model.NewRestaurant(idAsInt, "MockName", "https://some-rest.com")
+	var (
+		id         int
+		name, link string
+	)
+	err = db.QueryRowContext(
+		ctx, "SELECT * FROM restaurants AS r WHERE r.id = $1", restaurantId,
+	).Scan(&id, &name, &link)
 	if err != nil {
-		resp := network.NewBadRequestResponse("something wrong with restaurant object")
+		log.Errorf("Error getting restaurant by `%d` id: %s", restaurantId, err)
+		resp := network.NewBadRequestResponse(network.NotFoundBaseMessage)
 		ctx.JSON(resp.GetStatus(), resp)
 		return
 	}
 
-	resp := network.NewSuccessDataResponse(network.OKMessage, newRestaurant)
+	restaurant, err := model.NewRestaurant(id, name, link)
+	if err != nil {
+		log.Errorf("Error creating restaurant sturcture: %s", err)
+	}
+	resp := network.NewSuccessDataResponse(network.OKBaseMessage, restaurant)
 	ctx.JSON(resp.GetStatus(), resp)
 }
