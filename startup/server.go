@@ -8,6 +8,7 @@ import (
 	"github.com/quantum73/revizzoro-api/api/dishes"
 	"github.com/quantum73/revizzoro-api/api/restaurants"
 	pg "github.com/quantum73/revizzoro-api/arch/postgres"
+	base_handlers "github.com/quantum73/revizzoro-api/common/handlers"
 	"github.com/quantum73/revizzoro-api/config"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -39,6 +40,7 @@ func StartServer() {
 		SSLMode:            env.DBSSLMode,
 		MaxOpenConnections: env.DbMaxOpenConnections,
 		MaxIdleConnections: env.DbMaxIdleConnections,
+		QueryTimeout:       time.Duration(env.DBQueryTimeout) * time.Second,
 	}
 	db := pg.NewDatabase(ctx, dbConfig)
 	db.Connect()
@@ -46,13 +48,15 @@ func StartServer() {
 	// Setting up routers
 	gin.SetMode(string(env.ServerMode))
 	router := gin.Default()
+	// Global handlers
+	router.NoRoute(base_handlers.DefaultNotFoundHandler)
 	// Restaurants package router
 	restaurantsRouter := router.Group("/restaurants")
-	restaurantsController := restaurants.NewController(db)
+	restaurantsController := restaurants.NewController(ctx, db)
 	restaurantsController.MountRoutes(restaurantsRouter)
 	// Dishes package router
 	dishesRouter := router.Group("/dishes")
-	dishesController := dishes.NewController(db)
+	dishesController := dishes.NewController(ctx, db)
 	dishesController.MountRoutes(dishesRouter)
 
 	// Setting up server with gracefully shutdown

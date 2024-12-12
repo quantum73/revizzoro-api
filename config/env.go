@@ -32,6 +32,7 @@ type Env struct {
 	DBSSLMode            string `mapstructure:"DB_SSLMODE"`
 	DbMaxOpenConnections uint16 `mapstructure:"DB_MAX_OPEN_CONNECTIONS"`
 	DbMaxIdleConnections uint16 `mapstructure:"DB_MAX_IDLE_CONNECTIONS"`
+	DBQueryTimeout       uint16 `mapstructure:"DB_QUERY_TIMEOUT"`
 }
 
 func NewEnv(filename string, override bool) *Env {
