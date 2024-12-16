@@ -6,9 +6,9 @@ import (
 )
 
 type Restaurant struct {
-	Id   int    `json:"id" validate:"required,gt=0"`
-	Name string `json:"name" validate:"required,max=256"`
-	Link string `json:"link" validate:"required,url"`
+	ID   int    `json:"id" validate:"required,gt=0" gorm:"primary_key"`
+	Name string `json:"name" validate:"required,max=256" gorm:"not null,size:256"`
+	Link string `json:"link" validate:"required,url" gorm:"not null"`
 }
 
 func (restaurant *Restaurant) GetValue() *Restaurant {
@@ -26,16 +26,4 @@ func (restaurant *Restaurant) String() string {
 		return ""
 	}
 	return string(dataAsBytes)
-}
-
-func NewRestaurant(id int, name, link string) (*Restaurant, error) {
-	r := Restaurant{
-		Id:   id,
-		Name: name,
-		Link: link,
-	}
-	if err := r.Validate(); err != nil {
-		return nil, err
-	}
-	return &r, nil
 }

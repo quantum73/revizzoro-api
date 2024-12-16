@@ -6,6 +6,8 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -22,7 +24,7 @@ type DbConfig struct {
 }
 
 type Database interface {
-	GetInstance() *database
+	GetInstance() *gorm.DB
 	GetConfig() DbConfig
 	Connect()
 	Disconnect()
@@ -30,8 +32,9 @@ type Database interface {
 
 type database struct {
 	*sql.DB
-	context context.Context
-	config  DbConfig
+	instance *gorm.DB
+	context  context.Context
+	config   DbConfig
 }
 
 func NewDatabase(ctx context.Context, config DbConfig) Database {
@@ -42,8 +45,8 @@ func NewDatabase(ctx context.Context, config DbConfig) Database {
 	return &db
 }
 
-func (db *database) GetInstance() *database {
-	return db
+func (db *database) GetInstance() *gorm.DB {
+	return db.instance
 }
 
 func (db *database) GetConfig() DbConfig {
@@ -70,17 +73,28 @@ func (db *database) Connect() {
 
 	err = postgresDb.Ping()
 	if err != nil {
-		log.Panic("pinging to postgres failed: ", err)
+		log.Fatalln("pinging to postgres failed: ", err)
+	}
+
+	gormDB, err := gorm.Open(
+		postgres.New(postgres.Config{Conn: postgresDb}),
+		&gorm.Config{},
+	)
+	if err != nil {
+		log.Fatalln("gorm connection to postgres failed: ", err)
 	}
 
 	log.Info("successfully connected to postgres database")
-	db.DB = postgresDb
+	db.instance = gormDB
 }
 
 func (db *database) Disconnect() {
 	log.Info("disconnecting postgres...")
-	err := db.DB.Close()
+	sqlDB, err := db.instance.DB()
 	if err != nil {
+		log.Panic(err)
+	}
+	if err := sqlDB.Close(); err != nil {
 		log.Panic(err)
 	}
 	log.Info("successfully disconnected postgres")

@@ -2,16 +2,19 @@ package restaurants
 
 import (
 	"context"
+	"errors"
 	"github.com/quantum73/revizzoro-api/api/restaurants/model"
 	"github.com/quantum73/revizzoro-api/arch/network"
 	"github.com/quantum73/revizzoro-api/arch/postgres"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 const notFoundMessage = "restaurant not found"
+const badRequestMessage = "error during getting restaurants"
 
 type Service interface {
-	GetAll() ([]*model.Restaurant, network.ApiError)
+	GetAll() ([]model.Restaurant, network.ApiError)
 	GetOneByID(id int) (*model.Restaurant, network.ApiError)
 }
 
@@ -21,39 +24,17 @@ type service struct {
 }
 
 func NewService(ctx context.Context, db postgres.Database) Service {
-	return &service{context: ctx, db: db.GetInstance()}
+	return &service{context: ctx, db: db}
 }
 
-func (s *service) GetAll() ([]*model.Restaurant, network.ApiError) {
+func (s *service) GetAll() ([]model.Restaurant, network.ApiError) {
 	db := s.db.GetInstance()
 
-	restaurants := make([]*model.Restaurant, 0)
-	rows, err := db.QueryContext(s.context, "SELECT * FROM restaurants")
-	if err != nil {
-		return restaurants, network.NewNotFoundError(notFoundMessage, err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var (
-			id         int
-			name, link string
-		)
-		if err := rows.Scan(&id, &name, &link); err != nil {
-			log.Errorf("Error scanning row: %s", err)
-			continue
-		}
-
-		r, err := model.NewRestaurant(id, name, link)
-		if err != nil {
-			log.Errorf("Error creating restaurant sturcture: %s", err)
-			continue
-		}
-		restaurants = append(restaurants, r)
-	}
-
-	if err := rows.Err(); err != nil {
-		return restaurants, network.NewNotFoundError(notFoundMessage, err)
+	var restaurants []model.Restaurant
+	result := db.Find(&restaurants)
+	if err := result.Error; err != nil {
+		log.Errorf("error during getting restaurants: %s", result.Error)
+		return nil, network.NewBadRequestError(badRequestMessage, err)
 	}
 
 	return restaurants, nil
@@ -62,24 +43,19 @@ func (s *service) GetAll() ([]*model.Restaurant, network.ApiError) {
 func (s *service) GetOneByID(restaurantId int) (*model.Restaurant, network.ApiError) {
 	db := s.db.GetInstance()
 
-	var (
-		id         int
-		name, link string
-	)
-	err := db.QueryRowContext(
-		s.context,
-		"SELECT * FROM restaurants AS r WHERE r.id = $1",
-		restaurantId,
-	).Scan(&id, &name, &link)
-	if err != nil {
-		log.Errorf("Error getting restaurant by `%d` id: %s", restaurantId, err)
-		return nil, network.NewNotFoundError(notFoundMessage, err)
+	var restaurant model.Restaurant
+	result := db.First(&restaurant, restaurantId)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, network.NewNotFoundError(notFoundMessage, result.Error)
+		} else {
+			log.Errorf(
+				"unexpected error during getting restaurant by `%d` id: %s",
+				restaurantId, result.Error,
+			)
+			return nil, network.NewBadRequestError(badRequestMessage, result.Error)
+		}
 	}
 
-	restaurant, err := model.NewRestaurant(id, name, link)
-	if err != nil {
-		log.Errorf("Error creating restaurant sturcture: %s", err)
-		return nil, network.NewNotFoundError(notFoundMessage, err)
-	}
-	return restaurant, nil
+	return &restaurant, nil
 }

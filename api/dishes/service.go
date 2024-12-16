@@ -2,16 +2,19 @@ package dishes
 
 import (
 	"context"
+	"errors"
 	"github.com/quantum73/revizzoro-api/api/dishes/model"
 	"github.com/quantum73/revizzoro-api/arch/network"
 	"github.com/quantum73/revizzoro-api/arch/postgres"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 const notFoundMessage = "dish not found"
+const badRequestMessage = "error during getting dishes"
 
 type Service interface {
-	GetAll() ([]*model.Dish, network.ApiError)
+	GetAll() ([]model.Dish, network.ApiError)
 	GetOneByID(id int) (*model.Dish, network.ApiError)
 }
 
@@ -21,39 +24,17 @@ type service struct {
 }
 
 func NewService(ctx context.Context, db postgres.Database) Service {
-	return &service{context: ctx, db: db.GetInstance()}
+	return &service{context: ctx, db: db}
 }
 
-func (s *service) GetAll() ([]*model.Dish, network.ApiError) {
+func (s *service) GetAll() ([]model.Dish, network.ApiError) {
 	db := s.db.GetInstance()
 
-	dishes := make([]*model.Dish, 0)
-	rows, err := db.QueryContext(s.context, "SELECT * FROM dishes")
-	if err != nil {
-		return dishes, network.NewNotFoundError(notFoundMessage, err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var (
-			id, price, score, restaurantId int
-			name                           string
-		)
-		if err := rows.Scan(&id, &name, &price, &score, &restaurantId); err != nil {
-			log.Errorf("Error scanning row: %s", err)
-			continue
-		}
-
-		r, err := model.NewDish(id, name, price, score, restaurantId)
-		if err != nil {
-			log.Errorf("Error creating dish sturcture: %s", err)
-			continue
-		}
-		dishes = append(dishes, r)
-	}
-
-	if err := rows.Err(); err != nil {
-		return dishes, network.NewNotFoundError(notFoundMessage, err)
+	var dishes []model.Dish
+	result := db.Find(&dishes)
+	if err := result.Error; err != nil {
+		log.Errorf("error during getting dishes: %s", result.Error)
+		return nil, network.NewBadRequestError(badRequestMessage, err)
 	}
 
 	return dishes, nil
@@ -62,25 +43,19 @@ func (s *service) GetAll() ([]*model.Dish, network.ApiError) {
 func (s *service) GetOneByID(dishId int) (*model.Dish, network.ApiError) {
 	db := s.db.GetInstance()
 
-	var (
-		id, price, score, restaurantId int
-		name                           string
-	)
-	err := db.QueryRowContext(
-		s.context,
-		"SELECT * FROM dishes AS d WHERE d.id = $1",
-		dishId,
-	).Scan(&id, &name, &price, &score, &restaurantId)
-	if err != nil {
-		log.Errorf("Error getting dish by `%d` id: %s", dishId, err)
-		return nil, network.NewNotFoundError(notFoundMessage, err)
+	var dish model.Dish
+	result := db.First(&dish, dishId)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, network.NewNotFoundError(notFoundMessage, result.Error)
+		} else {
+			log.Errorf(
+				"unexpected error during getting dish by `%d` id: %s",
+				dishId, result.Error,
+			)
+			return nil, network.NewBadRequestError(badRequestMessage, result.Error)
+		}
 	}
 
-	dish, err := model.NewDish(id, name, price, score, restaurantId)
-	if err != nil {
-		log.Errorf("Error creating dish structure: %s", err)
-		return nil, network.NewNotFoundError(notFoundMessage, err)
-	}
-
-	return dish, nil
+	return &dish, nil
 }
