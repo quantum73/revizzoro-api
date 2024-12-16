@@ -31,3 +31,7 @@ up:
 down:
 	docker-compose -f ./docker-compose.yml down
 .PHONY:down
+
+migrate:
+	 migrate -database postgres://user:pass@localhost:5555/db?sslmode=disable -path arch/postgres/migrations up
+.PHONY:migrate
