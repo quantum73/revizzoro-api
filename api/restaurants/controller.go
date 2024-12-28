@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/quantum73/revizzoro-api/api/restaurants/dto"
 	"github.com/quantum73/revizzoro-api/api/restaurants/model"
 	"github.com/quantum73/revizzoro-api/arch/network"
 	"github.com/quantum73/revizzoro-api/arch/postgres"
@@ -13,8 +14,9 @@ import (
 )
 
 const (
-	notFoundMessage   = "restaurant not found"
-	badRequestMessage = "error during getting restaurants"
+	notFoundMessage     = "restaurant not found"
+	gettingErrorMessage = "error during getting restaurants"
+	createErrorMessage  = "error during creating restaurants"
 )
 
 type controller struct {
@@ -29,6 +31,38 @@ func NewController(ctx context.Context, db postgres.Database) network.BaseContro
 func (c *controller) MountRoutes(group *gin.RouterGroup) {
 	group.GET("/:id", c.DetailByIdHandler)
 	group.GET("/", c.ListHandler)
+	group.POST("/", c.CreateHandler)
+}
+
+func (c *controller) CreateHandler(ctx *gin.Context) {
+	db := c.db.GetInstance()
+
+	restaurantDTO, err := network.ReqBody(ctx, dto.EmptyCreateRestaurant())
+	if err != nil {
+		log.Errorf("error during parsing body to dto: %s", err.Error())
+		resp := network.NewBadRequestResponse(err.Error())
+		ctx.JSON(resp.GetStatus(), resp)
+		return
+	}
+
+	restaurant, err := model.NewRestaurant(restaurantDTO.Name, restaurantDTO.Link)
+	if err != nil {
+		log.Errorf("error during creating new restaurant object: %s", err.Error())
+		resp := network.NewBadRequestResponse(createErrorMessage)
+		ctx.JSON(resp.GetStatus(), resp)
+		return
+	}
+
+	result := db.Create(&restaurant)
+	if err := result.Error; err != nil {
+		log.Errorf("error during creating restaurant in db: %s", result.Error)
+		resp := network.NewBadRequestResponse(createErrorMessage)
+		ctx.JSON(resp.GetStatus(), resp)
+		return
+	}
+
+	resp := network.NewSuccessDataResponse(network.OKBaseMessage, restaurant)
+	ctx.JSON(resp.GetStatus(), resp)
 }
 
 func (c *controller) ListHandler(ctx *gin.Context) {
@@ -38,7 +72,7 @@ func (c *controller) ListHandler(ctx *gin.Context) {
 	result := db.Find(&restaurants)
 	if err := result.Error; err != nil {
 		log.Errorf("error during getting restaurants: %s", result.Error)
-		resp := network.NewBadRequestResponse(badRequestMessage)
+		resp := network.NewBadRequestResponse(gettingErrorMessage)
 		ctx.JSON(resp.GetStatus(), resp)
 		return
 	}
@@ -69,7 +103,7 @@ func (c *controller) DetailByIdHandler(ctx *gin.Context) {
 				"unexpected error during getting restaurant by `%d` id: %s",
 				restaurantId, result.Error,
 			)
-			resp := network.NewNotFoundResponse(badRequestMessage)
+			resp := network.NewNotFoundResponse(gettingErrorMessage)
 			ctx.JSON(resp.GetStatus(), resp)
 			return
 		}

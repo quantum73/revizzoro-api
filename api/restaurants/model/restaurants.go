@@ -6,9 +6,17 @@ import (
 )
 
 type Restaurant struct {
-	ID   int    `json:"id" validate:"required,gt=0" gorm:"primary_key"`
-	Name string `json:"name" validate:"required,max=256" gorm:"not null,size:256"`
-	Link string `json:"link" validate:"required,url" gorm:"not null"`
+	ID   int    `json:"id,omitempty" gorm:"primary_key,auto_increment"`
+	Name string `json:"name" validate:"required,min=3,max=256" gorm:"not null,size:256"`
+	Link string `json:"link" validate:"required,url,max=1024" gorm:"not null,size:1024"`
+}
+
+func NewRestaurant(name, link string) (*Restaurant, error) {
+	r := Restaurant{Name: name, Link: link}
+	if err := r.Validate(); err != nil {
+		return nil, err
+	}
+	return &r, nil
 }
 
 func (restaurant *Restaurant) GetValue() *Restaurant {
