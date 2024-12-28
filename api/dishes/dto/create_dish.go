@@ -9,7 +9,7 @@ type CreateDish struct {
 	Name         string `json:"name" validate:"required,min=3,max=256"`
 	Price        int    `json:"price" validate:"required,gt=0"`
 	Score        int    `json:"score" validate:"required,gt=0,lte=5"`
-	RestaurantID int    `json:"restaurant_id" validate:"required,gt=0"`
+	RestaurantID uint   `json:"restaurant_id" validate:"required,gt=0"`
 }
 
 func EmptyCreateDish() *CreateDish {

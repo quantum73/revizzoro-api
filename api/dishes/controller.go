@@ -55,7 +55,7 @@ func (c *controller) CreateHandler(ctx *gin.Context) {
 
 	result := db.Create(&dish)
 	if err := result.Error; err != nil {
-		log.Errorf("error during creating dish in db: %s", result.Error)
+		log.Errorf("error during creating dish in db: %s", err.Error())
 		resp := network.NewBadRequestResponse(createErrorMessage)
 		ctx.JSON(resp.GetStatus(), resp)
 		return
@@ -71,7 +71,7 @@ func (c *controller) ListHandler(ctx *gin.Context) {
 	var dishes []model.Dish
 	result := db.Find(&dishes)
 	if err := result.Error; err != nil {
-		log.Errorf("error during getting dishes: %s", result.Error)
+		log.Errorf("error during getting dishes: %s", err.Error())
 		resp := network.NewBadRequestResponse(notFoundMessage)
 		ctx.JSON(resp.GetStatus(), resp)
 		return

@@ -55,7 +55,7 @@ func (c *controller) CreateHandler(ctx *gin.Context) {
 
 	result := db.Create(&restaurant)
 	if err := result.Error; err != nil {
-		log.Errorf("error during creating restaurant in db: %s", result.Error)
+		log.Errorf("error during creating restaurant in db: %s", err.Error())
 		resp := network.NewBadRequestResponse(createErrorMessage)
 		ctx.JSON(resp.GetStatus(), resp)
 		return
@@ -71,7 +71,7 @@ func (c *controller) ListHandler(ctx *gin.Context) {
 	var restaurants []model.Restaurant
 	result := db.Find(&restaurants)
 	if err := result.Error; err != nil {
-		log.Errorf("error during getting restaurants: %s", result.Error)
+		log.Errorf("error during getting restaurants: %s", err.Error())
 		resp := network.NewBadRequestResponse(gettingErrorMessage)
 		ctx.JSON(resp.GetStatus(), resp)
 		return

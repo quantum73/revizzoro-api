@@ -11,10 +11,10 @@ type Dish struct {
 	Name         string `json:"name" validate:"required,min=3,max=256" gorm:"not null,size:256"`
 	Price        int    `json:"price" validate:"required,gt=0" gorm:"not null,check:name > 0"`
 	Score        int    `json:"score" validate:"required,gt=0,lte=5" gorm:"not null,check:score > 0 && score <= 5"`
-	RestaurantID int    `json:"restaurant_id" validate:"required,gt=0" gorm:"not null"`
+	RestaurantID uint   `json:"restaurant_id" validate:"required,gt=0" gorm:"not null"`
 }
 
-func NewDish(name string, price, score, restaurantId int) (*Dish, error) {
+func NewDish(name string, price, score int, restaurantId uint) (*Dish, error) {
 	d := Dish{
 		Name:         name,
 		Price:        price,

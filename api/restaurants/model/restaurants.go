@@ -3,12 +3,14 @@ package model
 import (
 	"encoding/json"
 	"github.com/go-playground/validator/v10"
+	dishes "github.com/quantum73/revizzoro-api/api/dishes/model"
 )
 
 type Restaurant struct {
-	ID   int    `json:"id,omitempty" gorm:"primary_key,auto_increment"`
-	Name string `json:"name" validate:"required,min=3,max=256" gorm:"not null,size:256"`
-	Link string `json:"link" validate:"required,url,max=1024" gorm:"not null,size:1024"`
+	ID     int           `json:"id,omitempty" gorm:"primary_key,auto_increment"`
+	Name   string        `json:"name" validate:"required,min=3,max=256" gorm:"not null,size:256"`
+	Link   string        `json:"link" validate:"required,url,max=1024" gorm:"not null,size:1024"`
+	Dishes []dishes.Dish `json:"dishes,omitempty" gorm:"foreignKey:RestaurantID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func NewRestaurant(name, link string) (*Restaurant, error) {
