@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
+	dishes "github.com/quantum73/revizzoro-api/api/dishes/model"
+	restaurants "github.com/quantum73/revizzoro-api/api/restaurants/model"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -86,6 +88,11 @@ func (db *database) Connect() {
 
 	log.Info("successfully connected to postgres database")
 	db.instance = gormDB
+
+	err = db.instance.AutoMigrate(&restaurants.Restaurant{}, &dishes.Dish{})
+	if err != nil {
+		log.Fatalln("migrations has failed: ", err)
+	}
 }
 
 func (db *database) Disconnect() {

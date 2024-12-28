@@ -45,6 +45,10 @@ func StartServer() {
 	db := pg.NewDatabase(ctx, dbConfig)
 	db.Connect()
 
+	// Controllers
+	restaurantsController := restaurants.NewController(ctx, db)
+	dishesController := dishes.NewController(ctx, db)
+
 	// Setting up routers
 	gin.SetMode(string(env.ServerMode))
 	router := gin.Default()
@@ -52,11 +56,9 @@ func StartServer() {
 	router.NoRoute(base_handlers.DefaultNotFoundHandler)
 	// Restaurants package router
 	restaurantsRouter := router.Group("/restaurants")
-	restaurantsController := restaurants.NewController(ctx, db)
 	restaurantsController.MountRoutes(restaurantsRouter)
 	// Dishes package router
 	dishesRouter := router.Group("/dishes")
-	dishesController := dishes.NewController(ctx, db)
 	dishesController.MountRoutes(dishesRouter)
 
 	// Setting up server with gracefully shutdown
