@@ -30,10 +30,6 @@ func (r *CreateRestaurant) ValidateErrors(errs validator.ValidationErrors) ([]st
 			msgs = append(msgs, fmt.Sprintf("%s must be at most %s size", err.Field(), err.Param()))
 		case "url":
 			msgs = append(msgs, fmt.Sprintf("%s must be a valid URL", err.Field()))
-		case "uri":
-			msgs = append(msgs, fmt.Sprintf("%s must be a valid URI", err.Field()))
-		case "uppercase":
-			msgs = append(msgs, fmt.Sprintf("%s must be uppercase", err.Field()))
 		default:
 			msgs = append(msgs, fmt.Sprintf("%s is invalid", err.Field()))
 		}
