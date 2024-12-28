@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
 	dishes "github.com/quantum73/revizzoro-api/api/dishes/model"
@@ -33,17 +32,13 @@ type Database interface {
 }
 
 type database struct {
-	*sql.DB
 	instance *gorm.DB
 	context  context.Context
 	config   DbConfig
 }
 
 func NewDatabase(ctx context.Context, config DbConfig) Database {
-	db := database{
-		context: ctx,
-		config:  config,
-	}
+	db := database{context: ctx, config: config}
 	return &db
 }
 
@@ -66,28 +61,25 @@ func (db *database) Connect() {
 		db.config.SSLMode,
 	)
 
-	postgresDb, err := sql.Open("postgres", uri)
+	postgresDb, err := gorm.Open(postgres.Open(uri), &gorm.Config{})
 	if err != nil {
 		log.Fatal("connection to postgres failed: ", err)
 	}
-	postgresDb.SetMaxIdleConns(int(db.config.MaxIdleConnections))
-	postgresDb.SetMaxOpenConns(int(db.config.MaxOpenConnections))
 
-	err = postgresDb.Ping()
+	sqlDB, err := postgresDb.DB()
+	if err != nil {
+		log.Fatal("connection to postgres failed: ", err)
+	}
+	sqlDB.SetMaxIdleConns(int(db.config.MaxIdleConnections))
+	sqlDB.SetMaxOpenConns(int(db.config.MaxOpenConnections))
+
+	err = sqlDB.Ping()
 	if err != nil {
 		log.Fatalln("pinging to postgres failed: ", err)
 	}
 
-	gormDB, err := gorm.Open(
-		postgres.New(postgres.Config{Conn: postgresDb}),
-		&gorm.Config{},
-	)
-	if err != nil {
-		log.Fatalln("gorm connection to postgres failed: ", err)
-	}
-
 	log.Info("successfully connected to postgres database")
-	db.instance = gormDB
+	db.instance = postgresDb
 
 	err = db.instance.AutoMigrate(&restaurants.Restaurant{}, &dishes.Dish{})
 	if err != nil {
@@ -101,6 +93,7 @@ func (db *database) Disconnect() {
 	if err != nil {
 		log.Panic(err)
 	}
+
 	if err := sqlDB.Close(); err != nil {
 		log.Panic(err)
 	}
