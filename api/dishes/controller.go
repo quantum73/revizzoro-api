@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/quantum73/revizzoro-api/api/dishes/dto"
 	"github.com/quantum73/revizzoro-api/api/dishes/model"
 	"github.com/quantum73/revizzoro-api/arch/network"
 	"github.com/quantum73/revizzoro-api/arch/postgres"
@@ -13,8 +14,9 @@ import (
 )
 
 const (
-	notFoundMessage   = "dish not found"
-	badRequestMessage = "error during getting dishes"
+	notFoundMessage     = "dish not found"
+	gettingErrorMessage = "error during getting dish"
+	createErrorMessage  = "error during creating dish"
 )
 
 type controller struct {
@@ -29,6 +31,38 @@ func NewController(ctx context.Context, db postgres.Database) network.BaseContro
 func (c *controller) MountRoutes(group *gin.RouterGroup) {
 	group.GET("/:id", c.DetailByIdHandler)
 	group.GET("/", c.ListHandler)
+	group.POST("/", c.CreateHandler)
+}
+
+func (c *controller) CreateHandler(ctx *gin.Context) {
+	db := c.db.GetInstance()
+
+	dishDTO, err := network.ReqBody(ctx, dto.EmptyCreateDish())
+	if err != nil {
+		log.Errorf("error during parsing body to dto: %s", err.Error())
+		resp := network.NewBadRequestResponse(err.Error())
+		ctx.JSON(resp.GetStatus(), resp)
+		return
+	}
+
+	dish, err := model.NewDish(dishDTO.Name, dishDTO.Price, dishDTO.Score, dishDTO.RestaurantID)
+	if err != nil {
+		log.Errorf("error during creating new restaurant object: %s", err.Error())
+		resp := network.NewBadRequestResponse(createErrorMessage)
+		ctx.JSON(resp.GetStatus(), resp)
+		return
+	}
+
+	result := db.Create(&dish)
+	if err := result.Error; err != nil {
+		log.Errorf("error during creating dish in db: %s", result.Error)
+		resp := network.NewBadRequestResponse(createErrorMessage)
+		ctx.JSON(resp.GetStatus(), resp)
+		return
+	}
+
+	resp := network.NewSuccessDataResponse(network.OKBaseMessage, dish)
+	ctx.JSON(resp.GetStatus(), resp)
 }
 
 func (c *controller) ListHandler(ctx *gin.Context) {
@@ -69,7 +103,7 @@ func (c *controller) DetailByIdHandler(ctx *gin.Context) {
 				"unexpected error during getting dish by `%d` id: %s",
 				dishId, result.Error,
 			)
-			resp := network.NewNotFoundResponse(badRequestMessage)
+			resp := network.NewNotFoundResponse(gettingErrorMessage)
 			ctx.JSON(resp.GetStatus(), resp)
 			return
 		}
