@@ -24,6 +24,7 @@ type Env struct {
 	ServerIdleTimeout     uint16         `mapstructure:"SERVER_IDLE_TIMEOUT"`
 	ServerGracefulTimeout uint16         `mapstructure:"SERVER_GRACEFUL_TIMEOUT"`
 	// database
+	DBHType              string `mapstructure:"DB_TYPE"`
 	DBHost               string `mapstructure:"DB_HOST"`
 	DBPort               uint16 `mapstructure:"DB_PORT"`
 	DBUser               string `mapstructure:"DB_USER"`
@@ -33,6 +34,7 @@ type Env struct {
 	DbMaxOpenConnections uint16 `mapstructure:"DB_MAX_OPEN_CONNECTIONS"`
 	DbMaxIdleConnections uint16 `mapstructure:"DB_MAX_IDLE_CONNECTIONS"`
 	DBQueryTimeout       uint16 `mapstructure:"DB_QUERY_TIMEOUT"`
+	DbMigrationsPath     string `mapstructure:"DB_MIGRATIONS_PATH"`
 }
 
 func NewEnv(filename string, override bool) *Env {
