@@ -65,6 +65,7 @@ func StartServer() {
 	mux.HandleFunc("GET /dishes/{id}/{$}", dishController.DetailById)
 	mux.HandleFunc("GET /dishes/{$}", dishController.List)
 	mux.HandleFunc("POST /dishes/{$}", dishController.Create)
+	mux.HandleFunc("GET /healthcheck/{$}", rootController.Healthcheck)
 	mux.HandleFunc("GET /{$}", rootController.Home)
 
 	// Setting up server with gracefully shutdown

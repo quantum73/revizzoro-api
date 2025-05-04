@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -86,7 +87,8 @@ func (db *database) Connect() error {
 		db.config.DbName,
 		db.config.SSLMode,
 	)
-	if err := db.MigrateUp(db.config.MigrationsPath, dbUriForMigrations); err != nil {
+	err = db.MigrateUp(db.config.MigrationsPath, dbUriForMigrations)
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		log.Warnf("%s Error running migrations: %v\n", op, err)
 		return err
 	}

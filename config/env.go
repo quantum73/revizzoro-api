@@ -47,12 +47,12 @@ func NewEnv(filename string, override bool) *Env {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatalf("Error reading environment file: %s", err)
+		log.Fatalf("Error reading environment file: %s\n", err)
 	}
 
 	err = viper.Unmarshal(&env)
 	if err != nil {
-		log.Fatalf("Error loading environment file: %s", err)
+		log.Fatalf("Error loading environment file: %s\n", err)
 	}
 
 	return &env

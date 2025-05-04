@@ -37,3 +37,19 @@ func MessageJSONResponse(w http.ResponseWriter, statusCode int, message string) 
 	payload := map[string]any{"message": message}
 	JSONResponse(w, statusCode, payload)
 }
+
+func OKMessageResponse(w http.ResponseWriter, msg string) {
+	MessageJSONResponse(w, http.StatusOK, msg)
+}
+
+func NotFoundMessageResponse(w http.ResponseWriter, msg string) {
+	MessageJSONResponse(w, http.StatusNotFound, msg)
+}
+
+func BadRequestMessageResponse(w http.ResponseWriter, msg string) {
+	MessageJSONResponse(w, http.StatusBadRequest, msg)
+}
+
+func ServerUnexpectedErrorMessageResponse(w http.ResponseWriter) {
+	MessageJSONResponse(w, http.StatusInternalServerError, "unexpected error")
+}

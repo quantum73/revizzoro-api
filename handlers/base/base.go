@@ -8,20 +8,25 @@ import (
 )
 
 type RootController struct {
-	database *sql.DB
+	db *sql.DB
 }
 
 func NewRootController(database *sql.DB) *RootController {
-	return &RootController{database: database}
+	return &RootController{db: database}
 }
 
 func (c *RootController) Home(w http.ResponseWriter, r *http.Request) {
-	const op = "base HomeHandler"
-	if err := c.database.Ping(); err != nil {
-		log.Warnf("[%s] ping to database error: %s", op, err)
-	} else {
-		log.Infof("[%s] ping database success", op)
+	network.OKMessageResponse(w, "Welcome to Revizzoro API")
+}
+
+func (c *RootController) Healthcheck(w http.ResponseWriter, r *http.Request) {
+	const op = "[base Healthcheck]"
+
+	dbIsAlive := true
+	if err := c.db.Ping(); err != nil {
+		log.Warnf("%s ping to database error: %s\n", op, err)
+		dbIsAlive = false
 	}
 
-	network.MessageJSONResponse(w, http.StatusOK, "OK")
+	network.JSONResponse(w, http.StatusOK, map[string]any{"dbIsAlive": dbIsAlive})
 }
