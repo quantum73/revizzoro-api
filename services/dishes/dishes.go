@@ -33,12 +33,18 @@ func (d DishService) DetailById(ctx context.Context, idx int) (*DishReadDTO, err
 	return dto, nil
 }
 
-func (d DishService) List(ctx context.Context) ([]*DishReadDTO, error) {
+func (d DishService) List(
+	ctx context.Context, limit, offset uint,
+) ([]*DishReadDTO, error) {
 	const op = "[services/dishes List]"
 
 	dishesDTO := make([]*DishReadDTO, 0)
 
-	rows, err := d.db.QueryContext(ctx, "SELECT * FROM dishes")
+	rows, err := d.db.QueryContext(
+		ctx,
+		"SELECT * FROM dishes LIMIT $1 OFFSET $2",
+		limit, offset,
+	)
 	if err != nil {
 		log.Warnf("%s Error query dishes: %v\n", op, err)
 		return dishesDTO, err

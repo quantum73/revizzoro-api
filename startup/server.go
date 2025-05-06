@@ -7,8 +7,11 @@ import (
 	"github.com/quantum73/revizzoro-api/config"
 	base_handlers "github.com/quantum73/revizzoro-api/handlers/base"
 	dishes_handlers "github.com/quantum73/revizzoro-api/handlers/dishes"
+	restaurants_handlers "github.com/quantum73/revizzoro-api/handlers/restaurants"
+	"github.com/quantum73/revizzoro-api/internal/pagination"
 	pg "github.com/quantum73/revizzoro-api/internal/postgres"
 	dishes_services "github.com/quantum73/revizzoro-api/services/dishes"
+	restaurants_services "github.com/quantum73/revizzoro-api/services/restaurants"
 	log "github.com/sirupsen/logrus"
 	"net"
 	"net/http"
@@ -57,14 +60,32 @@ func StartServer() {
 	dbObj := postgresDB.GetInstance()
 
 	// TODO: Setting up handlers and controllers
-	rootController := base_handlers.NewRootController(dbObj)
+	// Settings up services
 	dishService := dishes_services.NewDishService(dbObj)
-	dishController := dishes_handlers.NewDishController(dbObj, dishService)
+	restaurantService := restaurants_services.NewRestaurantService(dbObj)
+	// Settings up controllers (handlers)
+	rootController := base_handlers.NewRootController(dbObj)
+	dishController := dishes_handlers.NewDishController(
+		dbObj,
+		dishService,
+		pagination.NewPaginator(3, 0),
+	)
+	restaurantController := restaurants_handlers.NewRestaurantController(
+		dbObj,
+		restaurantService,
+		pagination.NewPaginator(1, 0),
+	)
 
 	mux := http.NewServeMux()
+	// dishes
 	mux.HandleFunc("GET /dishes/{id}/{$}", dishController.DetailById)
 	mux.HandleFunc("GET /dishes/{$}", dishController.List)
 	mux.HandleFunc("POST /dishes/{$}", dishController.Create)
+	// restaurants
+	mux.HandleFunc("GET /restaurants/{id}/{$}", restaurantController.DetailById)
+	mux.HandleFunc("GET /restaurants/{$}", restaurantController.List)
+	mux.HandleFunc("POST /restaurants/{$}", restaurantController.Create)
+	// root
 	mux.HandleFunc("GET /healthcheck/{$}", rootController.Healthcheck)
 	mux.HandleFunc("GET /{$}", rootController.Home)
 

@@ -9,6 +9,7 @@ import (
 	"github.com/quantum73/revizzoro-api/internal/common"
 	"github.com/quantum73/revizzoro-api/internal/enums"
 	"github.com/quantum73/revizzoro-api/internal/network"
+	"github.com/quantum73/revizzoro-api/internal/pagination"
 	"github.com/quantum73/revizzoro-api/services/dishes"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -19,17 +20,20 @@ var errDishIdMustBeInteger = errors.New("id must be integer")
 
 type dishService interface {
 	DetailById(ctx context.Context, idx int) (*dishes.DishReadDTO, error)
-	List(ctx context.Context) ([]*dishes.DishReadDTO, error)
-	Create(ctx context.Context, db *dishes.DishCreateDTO) (*dishes.DishReadDTO, error)
+	List(ctx context.Context, limit, offset uint) ([]*dishes.DishReadDTO, error)
+	Create(ctx context.Context, dishDTO *dishes.DishCreateDTO) (*dishes.DishReadDTO, error)
 }
 
 type DishController struct {
-	database *sql.DB
-	service  dishService
+	database  *sql.DB
+	service   dishService
+	paginator *pagination.Paginator
 }
 
-func NewDishController(database *sql.DB, service dishService) *DishController {
-	return &DishController{database: database, service: service}
+func NewDishController(
+	database *sql.DB, service dishService, paginator *pagination.Paginator,
+) *DishController {
+	return &DishController{database: database, service: service, paginator: paginator}
 }
 
 func (c *DishController) DetailById(w http.ResponseWriter, r *http.Request) {
@@ -69,9 +73,13 @@ func (c *DishController) DetailById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *DishController) List(w http.ResponseWriter, r *http.Request) {
-	const op = "[dishes listHandler]"
+	const op = "[handlers/dishes listHandler]"
 
-	dishesDTO, err := c.service.List(r.Context())
+	pageLimit := c.paginator.LimitFromQueryParams(r.URL.Query())
+	pageOffset := c.paginator.OffsetFromQueryParams(r.URL.Query())
+	log.Infof("%s limit=%d offset=%d\n", op, pageLimit, pageOffset)
+
+	dishesDTO, err := c.service.List(r.Context(), pageLimit, pageOffset)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			network.NotFoundMessageResponse(w, "there are no dishes")
@@ -106,7 +114,7 @@ func (c *DishController) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *DishController) Create(w http.ResponseWriter, r *http.Request) {
-	const op = "[dishes createHandler]"
+	const op = "[handlers/dishes createHandler]"
 
 	dishDTO := &dishes.DishCreateDTO{}
 	err := json.NewDecoder(r.Body).Decode(dishDTO)
